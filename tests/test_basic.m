@@ -10,23 +10,50 @@ function test_basic
     try
         % Определяем корневую папку проекта
         testPath = mfilename('fullpath');
-        projectRoot = fileparts(fileparts(testPath));
+        [testsDir, ~, ~] = fileparts(testPath);
+        projectRoot = fileparts(testsDir);  % На уровень выше tests
+        
+        fprintf('Корневая папка проекта: %s\n', projectRoot);
+        fprintf('Текущая папка теста: %s\n', testsDir);
         
         % Переходим в корневую папку проекта
         cd(projectRoot);
+        fprintf('Перешли в корень проекта: %s\n', pwd);
         
-        % Запускаем инициализацию
-        startup;
+        % Проверяем наличие startup.m в utils
+        utilsPath = fullfile(projectRoot, 'utils');
+        startupPath = fullfile(utilsPath, 'startup.m');
         
-        % Переходим обратно в папку тестов для чистоты
-        cd(originalDir);
+        fprintf('Ищем startup.m по пути: %s\n', startupPath);
+        
+        if exist(startupPath, 'file')
+            fprintf('Найден startup.m, запускаем...\n');
+            % Переходим в utils и запускаем startup
+            cd(utilsPath);
+            startup;
+            cd(projectRoot);  % Возвращаемся в корень проекта
+        else
+            % Показываем содержимое папки utils для отладки
+            fprintf('Содержимое папки utils:\n');
+            if exist(utilsPath, 'dir')
+                dir(utilsPath);
+            else
+                fprintf('Папка utils не существует!\n');
+            end
+            error('Файл startup.m не найден в папке utils!');
+        end
         
         % Проверяем, что переменные определены
         vars = {'t', 'T', 'k1', 'T1', 'k2'};
+        missingVars = {};
         for i = 1:length(vars)
             if ~exist(vars{i}, 'var')
-                error('Переменная %s не определена', vars{i});
+                missingVars{end+1} = vars{i};
             end
+        end
+        
+        if ~isempty(missingVars)
+            error('Переменные не определены: %s', strjoin(missingVars, ', '));
         end
         
         fprintf('✓ Все параметры определены\n');
@@ -68,13 +95,12 @@ function test_basic
             
             % Проверяем, что функция вызывается без ошибок
             try
-                % Временно переходим в корень проекта для вызова функции
-                cd(projectRoot);
+                % Создаем временную фигуру для теста
+                h = figure('Visible', 'off');
                 draw_pictures;
-                cd(originalDir);
+                close(h);
                 fprintf('✓ Функция draw_pictures выполнена успешно\n');
             catch ME
-                cd(originalDir);
                 fprintf('⚠ Ошибка при выполнении draw_pictures: %s\n', ME.message);
             end
         else
@@ -90,6 +116,9 @@ function test_basic
         fprintf('  Идентификатор: %s\n', ME.identifier);
         rethrow(ME);
     end
+    
+    % Возвращаемся в исходную папку
+    cd(originalDir);
     
     fprintf('\n====================================\n');
     fprintf('Тест завершен\n');

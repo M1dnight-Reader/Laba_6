@@ -10,7 +10,7 @@ function run_tests
     try
         % Определяем корневую папку проекта
         scriptPath = mfilename('fullpath');
-        projectRoot = fileparts(scriptPath);
+        projectRoot = fileparts(fileparts(scriptPath));  % Изменили: на уровень выше
         
         % Переходим в корень проекта и запускаем startup
         cd(projectRoot);
